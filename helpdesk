@@ -430,9 +430,9 @@
   <label class="search-label" for="nameInput">Your Name</label>
   <div class="search-wrapper">
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-      <circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.35-4.35"></path>
+      <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
     </svg>
-    <input type="text" id="nameInput" placeholder="Start typing your name…" autocomplete="off">
+    <input type="text" id="nameInput" placeholder="Start typing your name…" autocomplete="off" />
     <div id="dropdown"></div>
   </div>
 </div>
@@ -460,7 +460,7 @@
         <span class="session-type-label">Main Session</span>
         <span class="session-title" id="mainTitle">—</span>
         <a href="#" class="link-btn link-btn-primary" id="mainLink" target="_blank" rel="noopener">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M15 10l5-5m0 0h-4m4 0v4M9 15l-5 5m0 0h4m-4 0v-4"></path></svg>
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M15 10l5-5m0 0h-4m4 0v4M9 15l-5 5m0 0h4m-4 0v-4"/></svg>
           Join Main Session
         </a>
       </div>
@@ -468,7 +468,7 @@
         <span class="session-type-label">Breakout Session</span>
         <span class="session-title" id="breakoutTitle">—</span>
         <a href="#" class="link-btn link-btn-secondary" id="breakoutLink" target="_blank" rel="noopener">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M15 10l5-5m0 0h-4m4 0v4M9 15l-5 5m0 0h4m-4 0v-4"></path></svg>
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M15 10l5-5m0 0h-4m4 0v4M9 15l-5 5m0 0h4m-4 0v-4"/></svg>
           Join Breakout
         </a>
       </div>
@@ -478,6 +478,227 @@
 
 <footer class="footer">Secondary Science Leaders' Meeting &bull; For assistance, contact the organising team.</footer>
 
+<script>
+// ─────────────────────────────────────────────
+// CONFIGURATION — replace with your Sheet IDs
+// ─────────────────────────────────────────────
+const SHEET_ID = "17sbY-ZUker75RmbNzbPCMT9Wp9ieMP5tFfSVAtZZeWw";
 
+const PARTICIPANTS_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&sheet=Participants`;
+const SESSIONS_URL     = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&sheet=Sessions`;
+
+// ─────────────────────────────────────────────
+// STATE
+// ─────────────────────────────────────────────
+let participants = [];   // { name, school, day, breakoutTitle }
+let sessions = [];       // { day, type, title, url }
+
+// ─────────────────────────────────────────────
+// CSV PARSER (handles quoted fields with commas)
+// ─────────────────────────────────────────────
+function parseCSV(text) {
+  const lines = text.trim().split(/\r?\n/);
+  const headers = parseCSVRow(lines[0]).map(h => h.trim().toLowerCase());
+  return lines.slice(1).map(line => {
+    const vals = parseCSVRow(line);
+    const obj = {};
+    headers.forEach((h, i) => obj[h] = (vals[i] || "").trim());
+    return obj;
+  }).filter(row => Object.values(row).some(v => v));
+}
+
+function parseCSVRow(line) {
+  const result = [];
+  let cur = "", inQuote = false;
+  for (let i = 0; i < line.length; i++) {
+    const c = line[i];
+    if (c === '"') {
+      if (inQuote && line[i+1] === '"') { cur += '"'; i++; }
+      else inQuote = !inQuote;
+    } else if (c === ',' && !inQuote) {
+      result.push(cur); cur = "";
+    } else {
+      cur += c;
+    }
+  }
+  result.push(cur);
+  return result;
+}
+
+// ─────────────────────────────────────────────
+// DATA LOADING
+// ─────────────────────────────────────────────
+function setStatus(elId, badgeId, dotClass, badgeClass, badgeText, count) {
+  document.getElementById(elId).textContent = count !== null ? `${count} rows` : "—";
+  const badge = document.getElementById(badgeId);
+  badge.textContent = badgeText;
+  badge.className = `badge ${badgeClass}`;
+}
+
+async function loadData() {
+  let pOk = false, sOk = false;
+
+  // Load Participants
+  try {
+    const res = await fetch(PARTICIPANTS_URL);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const text = await res.text();
+    participants = parseCSV(text);
+    setStatus("participantCount", "participantBadge", "ok", "badge-ok", `✓ Loaded`, participants.length);
+    pOk = true;
+  } catch (e) {
+    setStatus("participantCount", "participantBadge", "error", "badge-error", "Error", null);
+    console.error("Participants fetch error:", e);
+  }
+
+  // Load Sessions
+  try {
+    const res = await fetch(SESSIONS_URL);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const text = await res.text();
+    sessions = parseCSV(text);
+    setStatus("sessionCount", "sessionBadge", "ok", "badge-ok", `✓ Loaded`, sessions.length);
+    sOk = true;
+  } catch (e) {
+    setStatus("sessionCount", "sessionBadge", "error", "badge-error", "Error", null);
+    console.error("Sessions fetch error:", e);
+  }
+
+  // Global status dot
+  const dot = document.getElementById("globalDot");
+  const label = document.getElementById("globalStatus");
+  if (pOk && sOk) {
+    dot.className = "status-dot ok";
+    label.textContent = `Data loaded — ${participants.length} participants, ${sessions.length} sessions`;
+  } else {
+    dot.className = "status-dot error";
+    label.textContent = "Data load error — expand for details";
+  }
+}
+
+// ─────────────────────────────────────────────
+// FUZZY SEARCH
+// ─────────────────────────────────────────────
+function fuzzyMatch(query, name) {
+  query = query.toLowerCase();
+  name = name.toLowerCase();
+  if (name.includes(query)) return true;
+  // simple initials-style match: all query chars appear in order
+  let qi = 0;
+  for (let i = 0; i < name.length && qi < query.length; i++) {
+    if (name[i] === query[qi]) qi++;
+  }
+  return qi === query.length;
+}
+
+// ─────────────────────────────────────────────
+// DROPDOWN
+// ─────────────────────────────────────────────
+const nameInput = document.getElementById("nameInput");
+const dropdown  = document.getElementById("dropdown");
+let activeIdx = -1;
+
+nameInput.addEventListener("input", () => {
+  const q = nameInput.value.trim();
+  activeIdx = -1;
+  if (q.length < 2) { dropdown.classList.remove("visible"); return; }
+
+  const matches = participants.filter(p => fuzzyMatch(q, p.name)).slice(0, 8);
+  if (matches.length === 0) {
+    dropdown.innerHTML = `<div class="dropdown-empty">No matches found</div>`;
+  } else {
+    dropdown.innerHTML = matches.map((p, i) =>
+      `<div class="dropdown-item" data-idx="${i}" data-name="${p.name}">
+        <span class="name">${p.name}</span>
+        <span class="school">${p.school}</span>
+      </div>`
+    ).join("");
+    dropdown.querySelectorAll(".dropdown-item").forEach(el => {
+      el.addEventListener("mousedown", () => selectParticipant(matches[+el.dataset.idx]));
+    });
+  }
+  dropdown.classList.add("visible");
+  // store for keyboard nav
+  dropdown._matches = matches;
+});
+
+nameInput.addEventListener("keydown", e => {
+  const items = dropdown.querySelectorAll(".dropdown-item");
+  if (!items.length) return;
+  if (e.key === "ArrowDown") {
+    e.preventDefault();
+    activeIdx = Math.min(activeIdx + 1, items.length - 1);
+  } else if (e.key === "ArrowUp") {
+    e.preventDefault();
+    activeIdx = Math.max(activeIdx - 1, 0);
+  } else if (e.key === "Enter" && activeIdx >= 0) {
+    e.preventDefault();
+    selectParticipant(dropdown._matches[activeIdx]);
+    return;
+  } else return;
+  items.forEach((el, i) => el.classList.toggle("active", i === activeIdx));
+});
+
+document.addEventListener("click", e => {
+  if (!e.target.closest(".search-wrapper")) dropdown.classList.remove("visible");
+});
+
+// ─────────────────────────────────────────────
+// RESULT DISPLAY
+// ─────────────────────────────────────────────
+function selectParticipant(p) {
+  dropdown.classList.remove("visible");
+  nameInput.value = p.name;
+
+  // Find main session for this day
+  const main = sessions.find(s =>
+    String(s.day).trim() === String(p.day).trim() &&
+    s.type.toLowerCase().trim() === "main"
+  );
+
+  // Find breakout session matching the participant's chosen breakout title
+  const breakout = sessions.find(s =>
+    String(s.day).trim() === String(p.day).trim() &&
+    s.title.trim().toLowerCase() === p.breakouttitle.trim().toLowerCase()
+  );
+
+  document.getElementById("avatarInitial").textContent = p.name.charAt(0).toUpperCase();
+  document.getElementById("resultName").textContent    = p.name;
+  document.getElementById("resultSchool").textContent  = p.school;
+  document.getElementById("resultDay").textContent     = `Day ${p.day}`;
+
+  document.getElementById("mainTitle").textContent     = main     ? main.title     : "Not found";
+  document.getElementById("breakoutTitle").textContent = breakout ? breakout.title : p.breakouttitle || "Not found";
+
+  const mainLink = document.getElementById("mainLink");
+  if (main && main.url) {
+    mainLink.href = main.url;
+    mainLink.style.opacity = "1";
+    mainLink.style.pointerEvents = "auto";
+  } else {
+    mainLink.href = "#";
+    mainLink.style.opacity = "0.4";
+    mainLink.style.pointerEvents = "none";
+  }
+
+  const breakoutLink = document.getElementById("breakoutLink");
+  if (breakout && breakout.url) {
+    breakoutLink.href = breakout.url;
+    breakoutLink.style.opacity = "1";
+    breakoutLink.style.pointerEvents = "auto";
+  } else {
+    breakoutLink.href = "#";
+    breakoutLink.style.opacity = "0.4";
+    breakoutLink.style.pointerEvents = "none";
+  }
+
+  document.getElementById("resultCard").style.display = "block";
+}
+
+// ─────────────────────────────────────────────
+// INIT
+// ─────────────────────────────────────────────
+loadData();
+</script>
 </body>
 </html>
