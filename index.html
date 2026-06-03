@@ -403,28 +403,6 @@
   <p>Self-Service Helpdesk &mdash; Enter your name to retrieve your session details</p>
 </header>
 
-<!-- Status Panel -->
-<div class="status-panel">
-  <details>
-    <summary>
-      <span class="status-dot" id="globalDot"></span>
-      <span id="globalStatus">Checking data connection…</span>
-    </summary>
-    <div class="status-body">
-      <div class="status-row">
-        <span class="label">Participant list</span>
-        <span class="count" id="participantCount">—</span>
-        <span class="badge badge-loading" id="participantBadge">Loading</span>
-      </div>
-      <div class="status-row">
-        <span class="label">Session list</span>
-        <span class="count" id="sessionCount">—</span>
-        <span class="badge badge-loading" id="sessionBadge">Loading</span>
-      </div>
-    </div>
-  </details>
-</div>
-
 <!-- Search Card -->
 <div class="card">
   <label class="search-label" for="nameInput">Your Name</label>
@@ -474,6 +452,27 @@
       </div>
     </div>
   </div>
+</div>
+
+<div class="status-panel">
+  <details>
+    <summary>
+      <span class="status-dot" id="globalDot"></span>
+      <span id="globalStatus">Checking data connection…</span>
+    </summary>
+    <div class="status-body">
+      <div class="status-row">
+        <span class="label">Participant list</span>
+        <span class="count" id="participantCount">—</span>
+        <span class="badge badge-loading" id="participantBadge">Loading</span>
+      </div>
+      <div class="status-row">
+        <span class="label">Session list</span>
+        <span class="count" id="sessionCount">—</span>
+        <span class="badge badge-loading" id="sessionBadge">Loading</span>
+      </div>
+    </div>
+  </details>
 </div>
 
 <footer class="footer">Secondary Science Leaders' Meeting &bull; For assistance, contact the organising team.</footer>
@@ -665,7 +664,7 @@ function selectParticipant(p) {
   document.getElementById("avatarInitial").textContent = p.name.charAt(0).toUpperCase();
   document.getElementById("resultName").textContent    = p.name;
   document.getElementById("resultSchool").textContent  = p.school;
-  document.getElementById("resultDay").textContent     = `Day ${p.day}`;
+  document.getElementById("resultDay").textContent     = p.day;
 
   document.getElementById("mainTitle").textContent     = main     ? main.title     : "Not found";
   document.getElementById("breakoutTitle").textContent = breakout ? breakout.title : p.breakouttitle || "Not found";
