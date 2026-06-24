@@ -375,6 +375,22 @@
     line-height: 1.35;
   }
 
+  /* Remarks */
+  .session-remarks {
+    font-size: 12px;
+    color: var(--amber);
+    line-height: 1.4;
+    font-style: italic;
+    padding: 6px 8px;
+    background: var(--amber-light);
+    border-radius: 6px;
+    display: none;
+  }
+
+  .session-remarks.visible {
+    display: block;
+  }
+
   .footer {
     text-align: center;
     font-size: 12px;
@@ -438,6 +454,7 @@
       <div class="session-card">
         <span class="session-type-label">Main Session</span>
         <span class="session-title" id="mainTitle">—</span>
+        <span class="session-remarks" id="mainRemarks"></span>
         <a href="#" class="link-btn link-btn-primary" id="mainLink" target="_blank" rel="noopener">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M15 10l5-5m0 0h-4m4 0v4M9 15l-5 5m0 0h4m-4 0v-4"/></svg>
           Join Main Session
@@ -446,6 +463,7 @@
       <div class="session-card">
         <span class="session-type-label">Concurrent Sharing</span>
         <span class="session-title" id="breakoutTitle">—</span>
+        <span class="session-remarks" id="breakoutRemarks"></span>
         <a href="#" class="link-btn link-btn-secondary" id="breakoutLink" target="_blank" rel="noopener">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M15 10l5-5m0 0h-4m4 0v4M9 15l-5 5m0 0h4m-4 0v-4"/></svg>
           Join Breakout
@@ -491,7 +509,7 @@ const SESSIONS_URL     = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gvi
 // STATE
 // ─────────────────────────────────────────────
 let participants = [];   // { name, school, day, breakoutTitle }
-let sessions = [];       // { day, type, title, url }
+let sessions = [];       // { day, type, title, url, remarks }
 
 // ─────────────────────────────────────────────
 // CSV PARSER (handles quoted fields with commas)
@@ -583,7 +601,6 @@ function fuzzyMatch(query, name) {
   query = query.toLowerCase();
   name = name.toLowerCase();
   if (name.includes(query)) return true;
-  // simple initials-style match: all query chars appear in order
   let qi = 0;
   for (let i = 0; i < name.length && qi < query.length; i++) {
     if (name[i] === query[qi]) qi++;
@@ -618,7 +635,6 @@ nameInput.addEventListener("input", () => {
     });
   }
   dropdown.classList.add("visible");
-  // store for keyboard nav
   dropdown._matches = matches;
 });
 
@@ -646,6 +662,17 @@ document.addEventListener("click", e => {
 // ─────────────────────────────────────────────
 // RESULT DISPLAY
 // ─────────────────────────────────────────────
+function setRemarks(elId, text) {
+  const el = document.getElementById(elId);
+  if (text) {
+    el.textContent = text;
+    el.classList.add("visible");
+  } else {
+    el.textContent = "";
+    el.classList.remove("visible");
+  }
+}
+
 function selectParticipant(p) {
   dropdown.classList.remove("visible");
   nameInput.value = p.name;
@@ -670,6 +697,11 @@ function selectParticipant(p) {
   document.getElementById("mainTitle").textContent     = main     ? main.title     : "Not found";
   document.getElementById("breakoutTitle").textContent = breakout ? breakout.title : p.breakouttitle || "Not found";
 
+  // Remarks
+  setRemarks("mainRemarks",     main     ? (main.remarks     || "") : "");
+  setRemarks("breakoutRemarks", breakout ? (breakout.remarks || "") : "");
+
+  // Main link
   const mainLink = document.getElementById("mainLink");
   if (main && main.url) {
     mainLink.href = main.url;
@@ -681,6 +713,7 @@ function selectParticipant(p) {
     mainLink.style.pointerEvents = "none";
   }
 
+  // Breakout link
   const breakoutLink = document.getElementById("breakoutLink");
   if (breakout && breakout.url) {
     breakoutLink.href = breakout.url;
